@@ -8,6 +8,7 @@
 #include "Renderer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "VertexArray.h"
 
 struct ShaderProgramSource
 {
@@ -153,11 +154,13 @@ int main(void)
 
         // Vertex array
         unsigned int vao; // stores attrib layout, vertex buffer and index buffer together for later use on draw call
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
 
-        // Vertex buffer
+
+        VertexArray va;
         VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+        VertexBufferLayout layout;
+        layout.Push<float>(2);
+        va.AddBuffer(vb, layout);
 
         // each vertex that we have, contains data (position, texture position)
         // this variables of vertex are attributes, and we have to describe them to openGL
@@ -169,8 +172,7 @@ int main(void)
         // offset between each attribute in bytes => probably shoud be calculated by opengl if it knows type and amount...
         // and offset in bytes from start of attribute?? will be done by macros?? in future
         // and don't forget to enable it
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0); // binds vertex buffer to vertex array 
+
 
         // Index buffer
         IndexBuffer ib(indices, 6);
@@ -204,7 +206,7 @@ int main(void)
             glUseProgram(shader);
             glUniform4f(location, sin(timer), 0.0f, 0.0f, 1.0f);
             timer += 0.01f;
-            glBindVertexArray(vao);
+            va.Bind();
             ib.Bind(); // do I really need that?
 
             //Simple Triangle
