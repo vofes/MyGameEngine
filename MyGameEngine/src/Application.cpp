@@ -1,6 +1,67 @@
 #include <iostream>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <fstream>
+#include <string>
+#include <sstream>
+
+static void GLClearError()
+{
+    while (glGetError() != GL_NO_ERROR);
+}
+
+static bool GLLogCall()
+{
+    while (true)
+    {
+        GLenum error = glGetError();
+        if (error == GL_NO_ERROR) return true;
+        std::cout << "[OpenGL Error] (" << error << ")" << std::endl;
+    }
+    
+}
+
+struct ShaderProgramSource
+{
+    std::string VertexSource;
+    std::string FragmentSource;
+};
+
+static ShaderProgramSource ParseShader(const std::string& filePath)
+{
+    std::ifstream stream(filePath);
+
+    enum class ShaderType
+    {
+        NONE = -1, VERTEX = 0, FRAGMENT = 1
+    };
+
+    std::string line;
+    std::stringstream ss[2];
+    ShaderType type = ShaderType::NONE;
+    while (getline(stream, line))
+    {
+        if (line.find("shader") != std::string::npos)
+        {
+            // Has found shader on that line
+            if (line.find("vertex") != std::string::npos)
+            {
+                // set mode to vertex
+                type = ShaderType::VERTEX;
+            }
+            else if (line.find("fragment") != std::string::npos)
+            {
+                //set mode to fragment
+                type = ShaderType::FRAGMENT;
+            }   
+        }
+        else 
+        {
+            ss[(int)type] << line << '\n';
+        }
+    }
+    return { ss[0].str(), ss[1].str() };
+}
 
 static unsigned int CompileShader(unsigned int type, const std::string& source)
 {
@@ -81,19 +142,27 @@ int main(void)
     std::cout << glGetString(GL_VERSION) << std::endl;
 
 
+    // data
+    float positions[] = {
+        -0.5f,  -0.5f, // 0
+         0.5f,  -0.5f, // 1
+         0.5f,   0.5f, // 2
+        -0.5f,   0.5f  // 3
+    };
+
+    unsigned int indices[] = {
+        0, 1, 2, 
+        2, 3, 0
+    };
+
     // Generate 1 buffer and giving us back an id
     unsigned int buffer;
     glGenBuffers(1, &buffer);
     // Selecting buffer
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    // specify data
-    float positions[6] = {
-        -0.5f,  -0.5f,
-        -0.0f,   0.5f,
-         0.5f,   -0.5f
-    };
+    
     //put data in that buffer
-    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), positions, GL_STATIC_DRAW);
 
     // each vertex that we have, contains data (position, texture position)
     // this variables of vertex are attributes, and we have to describe them to openGL
@@ -105,31 +174,19 @@ int main(void)
     // offset between each attribute in bytes => probably shoud be calculated by opengl if it knows type and amount...
     // and offset in bytes from start of attribute?? will be done by macros?? in future
 
+    
+    unsigned int ibo;
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);
+
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
     // and don't forget to enable it
     glEnableVertexAttribArray(0);
 
-    std::string vertexShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) in vec4 position;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   gl_Position = position;\n"
-        "}\n";
+    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
 
-    std::string fragmentShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) out vec4 color;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   color = vec4(1.0, 0.0, 0.0, 1.0);\n"
-        "}\n";
-
-    unsigned int shader = CreateShader(vertexShader, fragmentShader);
+    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     glUseProgram(shader);
 
     /* Loop until the user closes the window */
@@ -138,10 +195,14 @@ int main(void)
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
+        //GLClearError();
+
         //Simple Triangle
         /* Says that we need to draw triangle from a buffer data
         which starts at index 0 and contains 3 vectors (vertices) */
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+
+        GLLogCall();
         
 
         /* Swap front and back buffers */
