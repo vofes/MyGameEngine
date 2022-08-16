@@ -1,8 +1,4 @@
 ﻿  Application.cpp
-  IndexBuffer.cpp
-  Renderer.cpp
-  Shader.cpp
-  VertexArray.cpp
-  VertexBuffer.cpp
+  Texture.cpp
   Generating Code...
   MyGameEngine.vcxproj -> C:\Users\Admin\Desktop\MyGameEngine\Debug\MyGameEngine.exe

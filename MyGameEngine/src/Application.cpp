@@ -10,11 +10,7 @@
 #include "IndexBuffer.h"
 #include "VertexArray.h"
 #include "Shader.h"
-
-
-
-
-
+#include "Texture.h"
 
 //Copied cope from:
 //https://www.glfw.org/documentation
@@ -58,10 +54,10 @@ int main(void)
     {
         // data
         float positions[] = {
-            -0.5f,  -0.5f, // 0
-             0.5f,  -0.5f, // 1
-             0.5f,   0.5f, // 2
-            -0.5f,   0.5f  // 3
+            -0.5f,  -0.5f, 0.0f, 0.0f, // 0
+             0.5f,  -0.5f, 1.0f, 0.0f, // 1
+             0.5f,   0.5f, 1.0f, 1.0f, // 2
+            -0.5f,   0.5f, 0.0f, 1.0f // 3
         };
 
         unsigned int indices[] = {
@@ -69,9 +65,14 @@ int main(void)
             2, 3, 0
         };
 
+        // 1 - source alpha = destination alpha
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_BLEND);
+
         VertexArray va;
-        VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+        VertexBuffer vb(positions, 4 * 4 * sizeof(float));
         VertexBufferLayout layout;
+        layout.Push<float>(2);
         layout.Push<float>(2);
         va.AddBuffer(vb, layout);
 
@@ -89,11 +90,14 @@ int main(void)
 
         // Index buffer
         IndexBuffer ib(indices, 6);
+        ib.Bind();
 
         Shader shader("res/shaders/Basic.shader");
         shader.Bind();
 
-        shader.SetUniform4f("u_Color", 0.8f, 0.3f, 0.8f, 1.0f);
+        Texture texture("res/textures/transperentTest.png");
+        texture.Bind();
+        shader.SetUniform1i("u_Texture", 0);
         
 
         float timer = 0.0f;
@@ -104,6 +108,9 @@ int main(void)
         shader.Unbind();
 
         Renderer renderer;
+        
+
+        
 
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
@@ -111,9 +118,6 @@ int main(void)
             /* Render here */
 
             renderer.Clear();
-            shader.Bind();
-            shader.SetUniform4f("u_Color", sin(timer), 0.0f, 0.0f, 1.0f);
-            timer += 0.01f;
             renderer.Draw(va, ib, shader);
             GLHandelErrors();
 
