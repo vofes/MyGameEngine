@@ -5,11 +5,6 @@
 #include <string>
 #include <sstream>
 
-static void GLClearError()
-{
-    while (glGetError() != GL_NO_ERROR);
-}
-
 static bool GLLogCall()
 {
     while (true)
@@ -119,6 +114,10 @@ int main(void)
     if (!glfwInit())
         return -1;
 
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
     if (!window)
@@ -129,6 +128,9 @@ int main(void)
 
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
+
+    /* fps limitation to V-SYNC*/
+    glfwSwapInterval(1);
 
     // Needs to be after context is created!!!
     GLenum err = glewInit();
@@ -155,15 +157,20 @@ int main(void)
         2, 3, 0
     };
 
+    // Vertex array
+    unsigned int vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    // Vertex buffer
     // Generate 1 buffer and giving us back an id
     unsigned int buffer;
     glGenBuffers(1, &buffer);
     // Selecting buffer
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    
     //put data in that buffer
-    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), positions, GL_STATIC_DRAW);
-
+    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), positions, GL_STATIC_DRAW);
+    
     // each vertex that we have, contains data (position, texture position)
     // this variables of vertex are attributes, and we have to describe them to openGL
     // we specify: 
@@ -173,21 +180,35 @@ int main(void)
     // if we want to normilize it => usually not
     // offset between each attribute in bytes => probably shoud be calculated by opengl if it knows type and amount...
     // and offset in bytes from start of attribute?? will be done by macros?? in future
+    // and don't forget to enable it
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0); // binds vertex buffer to vertex array 
 
-    
+    // Index buffer
     unsigned int ibo;
     glGenBuffers(1, &ibo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
-    // and don't forget to enable it
-    glEnableVertexAttribArray(0);
 
     ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
 
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     glUseProgram(shader);
+
+    int location = glGetUniformLocation(shader, "u_Color");
+    if (location == -1) // uniform is not found or not used
+    {
+        GLLogCall();
+    }
+    glUniform4f(location, 1.0f, 0.0f, 0.0f, 1.0f);
+
+    float timer = 0.0f;
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -195,7 +216,11 @@ int main(void)
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        //GLClearError();
+        glUseProgram(shader);
+        glUniform4f(location, sin(timer), 0.0f, 0.0f, 1.0f);
+        timer += 0.01f;
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
         //Simple Triangle
         /* Says that we need to draw triangle from a buffer data
