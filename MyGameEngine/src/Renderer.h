@@ -5,8 +5,11 @@
 #include "VertexArray.h"
 #include "Shader.h"
 
+#define ASSERT(x) if (!(x)) __debugbreak();
+#define GLCall(x) x;\
+	ASSERT(GLHandelErrors(#x, __FILE__, __LINE__))
 
-bool GLHandelErrors();
+bool GLHandelErrors(const char* function, const char* file, int line);
 
 class Renderer
 {
