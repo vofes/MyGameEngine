@@ -18,7 +18,6 @@ void Renderer::Draw(const VertexArray& va, const IndexBuffer& ib, const Shader& 
 {
     shader.Bind();
     va.Bind();
-    ib.Bind(); // do I really need that?
 
     /* Says that we need to draw triangle from a buffer data
     which starts at index 0 and contains 3 vectors (vertices) */

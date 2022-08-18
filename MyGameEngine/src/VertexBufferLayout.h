@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <GL/glew.h>
+#include <iostream>
 
 struct VertexBufferElement
 {
@@ -34,7 +35,7 @@ public:
 	template<typename T>
 	void Push(unsigned int count)
 	{
-		//static_assert(false);
+		std::cout << "[VertexBufferLayout Error]: Pushing data to layout of unsupported type!" << std::endl;
 	}
 
 	template<>
