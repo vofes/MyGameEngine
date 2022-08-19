@@ -19,6 +19,9 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 
+#include "tests/TestClearColor.h"
+#include "tests/TestTexture2D.h"
+
 //Copied cope from:
 //https://www.glfw.org/documentation
 
@@ -59,64 +62,9 @@ int main(void)
 
     std::cout << glGetString(GL_VERSION) << std::endl;
     {
-        // data
-        float positions[] = {
-             -50.0f, -50.0f, 0.0f, 0.0f, // 0
-              50.0f, -50.0f, 1.0f, 0.0f, // 1
-              50.0f,  50.0f, 1.0f, 1.0f, // 2
-             -50.0f,  50.0f, 0.0f, 1.0f // 3
-        };
-
-        unsigned int indices[] = {
-            0, 1, 2,
-            2, 3, 0
-        };
-
         // 1 - source alpha = destination alpha
         GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
         GLCall(glEnable(GL_BLEND));
-
-        VertexArray va;
-        VertexBuffer vb(positions, 4 * 4 * sizeof(float));
-        VertexBufferLayout layout;
-        layout.Push<float>(2);
-        layout.Push<float>(2);
-        va.AddBuffer(vb, layout);
-
-        // each vertex that we have, contains data (position, texture position)
-        // this variables of vertex are attributes, and we have to describe them to openGL
-        // we specify: 
-        // index of attribute => this is the first one => 0
-        // amount of variables in this attribute => for Vector2D this is 2 floats => 2
-        // type of variable => float
-        // if we want to normilize it => usually not
-        // offset between each attribute in bytes => probably shoud be calculated by opengl if it knows type and amount...
-        // and offset in bytes from start of attribute?? will be done by macros?? in future
-        // and don't forget to enable it
-
-
-        // Index buffer
-        IndexBuffer ib(indices, 6);
-        ib.Bind();
-
-        glm::mat4 proj = glm::ortho(0.0f, 960.0f, 0.0f, 540.0f, -1.0f, 1.0f);
-        glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-
-
-        Shader shader("res/shaders/Basic.shader");
-        shader.Bind();
-        
-        Texture texture("res/textures/transperentTest.png");
-        texture.Bind();
-        shader.SetUniform1i("u_Texture", 0);
-        
-
-        float timer = 0.0f;
-
-        va.Unbind();
-        vb.Unbind();
-        ib.Unbind();
-        shader.Unbind();
 
         Renderer renderer;
 
@@ -126,40 +74,34 @@ int main(void)
         ImGui_ImplOpenGL3_Init("#version 330");
         ImGui::StyleColorsDark();
 
-        glm::vec3 translationA(200.0f, 200.0f, 0.0f);
-        glm::vec3 translationB(400.0f, 200.0f, 0.0f);
+        test::Test* currentTest;
+        test::TestMenu* testMenu = new test::TestMenu(currentTest);
+        currentTest = testMenu;
+
+        testMenu->RegisterTest<test::TestClearColor>("Clear color");
+        testMenu->RegisterTest<test::TestTexture2D>("Test texture");
         
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
-
             renderer.Clear();
 
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
-            shader.Bind();
-
+            if (currentTest)
             {
-                glm::mat4 model = glm::translate(glm::mat4(1.0f), translationA);
-                glm::mat4 mvp = proj * view * model; // opengl = column matrics, therefore needs to be multiplied in "right to left" order
-                shader.SetUniformMat4f("u_MVP", mvp);
-                renderer.Draw(va, ib, shader);
-            }
-
-            {
-                glm::mat4 model = glm::translate(glm::mat4(1.0f), translationB);
-                glm::mat4 mvp = proj * view * model; // opengl = column matrics, therefore needs to be multiplied in "right to left" order
-                shader.SetUniformMat4f("u_MVP", mvp);
-                renderer.Draw(va, ib, shader);
-            }
-
-            {
-                ImGui::Begin("Hello, world!");
-                ImGui::SliderFloat3("TranslationA", &translationA.x, 0.0f, 960.0f);
-                ImGui::SliderFloat3("TranslationB", &translationB.x, 0.0f, 960.0f);
-                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+                currentTest->OnUpdate(0.0f);
+                ImGui::Begin("Test");
+                if (currentTest != testMenu && ImGui::Button("<"))
+                {
+                    GLCall(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
+                    delete currentTest;
+                    currentTest = testMenu;
+                }
+                currentTest->OnRender();
+                currentTest->OnImGuiRender();
                 ImGui::End();
             }
 
@@ -174,7 +116,11 @@ int main(void)
             glfwPollEvents();
         }
 
-        shader.Unbind();
+        if (currentTest != testMenu)
+        {
+            delete currentTest;
+        }
+        delete testMenu;
     }
 
     ImGui_ImplOpenGL3_Shutdown();
